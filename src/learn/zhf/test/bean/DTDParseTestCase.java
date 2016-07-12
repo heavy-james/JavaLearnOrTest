@@ -12,7 +12,7 @@ public class DTDParseTestCase extends TestCase{
 
 	@Override
 	public void run() {
-		DTDParser parser = new DTDParser("C:\\Users\\v_hfzhan\\Desktop\\easymusic\\material\\partwise.dtd", "utf-8", "java_class");
+		DTDParser parser = new DTDParser("D:\\material\\partwise.dtd", "utf-8", "java_class");
 		try {
 			parser.parse();
 		} catch (FileNotFoundException e) {

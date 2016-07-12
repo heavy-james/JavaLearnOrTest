@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import learn.zhf.log.Log;
 
@@ -22,7 +23,6 @@ public class DTDDocument {
 	private String mCurrentParseString = null;
 	private String mEncoding = null;
 	private File mFile;
-	private Matcher mCurrentMatcher;
 
 	private DTDDocument() {
 
@@ -42,8 +42,55 @@ public class DTDDocument {
 		DTDNode node = null;
 		Log.d(TAG, "=====DTDDocument getNextNode=====");
 		if (hasNextNode()) {
-			String nextNodeContent = mCurrentMatcher.group(0);
-			mCurrentParseString = mCurrentParseString.substring(mCurrentMatcher.start() + nextNodeContent.length());
+			try {
+				Thread.sleep(10);
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			int nodeStartPos = -1;
+			int nodeEndPos = -1;
+			int commentStartPos = -1;
+			int commentEndPos = -1;
+			Matcher matcher = mNodeStartPattern.matcher(mCurrentParseString);
+			if(matcher.find()){
+				nodeStartPos = matcher.start();
+			}
+			matcher = mNodeEndPattern.matcher(mCurrentParseString);
+			if(matcher.find()){
+				nodeEndPos = matcher.start();
+			}
+			matcher = mCommentStartPattern.matcher(mCurrentParseString);
+			if(matcher.find()){
+				commentStartPos = matcher.start();
+			}
+			matcher = mCommentEndPattern.matcher(mCurrentParseString);
+			if(matcher.find()){
+				commentEndPos = matcher.start();
+			}
+			
+			int length = commentEndPos - commentStartPos;
+			String nextNodeContent = null;
+			if(commentStartPos >= 0 &&length >= 0){
+				nextNodeContent = mCurrentParseString.substring(commentStartPos, commentEndPos + "-->".length());
+				mCurrentParseString = mCurrentParseString.substring(commentStartPos + nextNodeContent.length());
+			}
+			length = nodeEndPos - nodeStartPos;
+			if(nodeStartPos >= 0 && length >= 0){
+				if(commentStartPos < 0 || (commentStartPos >= 0 && commentStartPos > nodeEndPos)){
+					nextNodeContent = mCurrentParseString.substring(nodeStartPos, nodeEndPos + "**>".length());
+					mCurrentParseString = mCurrentParseString.substring(nodeStartPos + nextNodeContent.length());
+				}
+			}
+			//Log.d(TAG, "nodeStartPos-->" + nodeStartPos);
+			//Log.d(TAG, "nodeEndPos-->" + nodeEndPos);
+			//Log.d(TAG, "commentStartPos-->" + commentStartPos);
+			//Log.d(TAG, "commentEndPos-->" + commentEndPos);
+			//Log.d(TAG, "nextNodeContent-->" + nextNodeContent);
+			//Log.d(TAG, "mCurrentParseString-->" + mCurrentParseString);
+			if(nextNodeContent == null){
+				return null;
+			}
 			node = getCommentNode(nextNodeContent);
 			if (node == null) {
 				node = getAttriNode(nextNodeContent);
@@ -94,23 +141,71 @@ public class DTDDocument {
 		return false;
 	}
 	
-
+	Pattern mNodeStartPattern = Pattern.compile("\\s*<![^-][^-]");
+	Pattern mNodeEndPattern = Pattern.compile("[^-][^-]>\\s*");
+	Pattern mCommentStartPattern = Pattern.compile("\\s*<!--");
+	Pattern mCommentEndPattern = Pattern.compile("-->\\s*");
+	
+	
 	public boolean contanisNode(String data) {
 		if (data != null) {
-			data = data.trim();
-			if(data.startsWith("<!--")){
-				mCurrentMatcher = DTDConstants.Patterns.getCommentNodePattern().matcher(data);
-				if(mCurrentMatcher.find()){
-					return true;
-				}
-			}else{
-				mCurrentMatcher = DTDConstants.Patterns.getDTDNodePattern().matcher(data);
-				if (mCurrentMatcher.find()) {
-					return true;
-				}
-			}
+			return containsComment(data) || containsNormalNode(data);
 		}
 		return false;
+	}
+	
+	public boolean containsNormalNode(String data){
+		return getNormalNodeLength(data) > 0;
+	}
+	
+	public int getNormalNodeLength(String data){
+		Matcher matcher = mNodeStartPattern.matcher(data);
+		int nodeStartPos = -1;
+		if(matcher.find()){
+			nodeStartPos = matcher.start();
+		}
+		int nodeEndPos = -1;
+		matcher = mNodeEndPattern.matcher(data);
+		if(matcher.find()){
+			nodeEndPos = matcher.start();
+		}
+		int commentStartPos = -1;
+		matcher = mCommentStartPattern.matcher(data);
+		if(matcher.find()){
+			commentStartPos = matcher.start();
+		}
+		if(nodeStartPos >= 0 && nodeEndPos >= 0 && nodeEndPos > nodeStartPos){
+			if(commentStartPos >= 0 && nodeStartPos > commentStartPos){
+				return 0;
+			}else{
+				return nodeEndPos - nodeStartPos;
+			}
+		}
+		return 0;
+	}
+	
+	public int getCommentNodeLength(String data){
+		if (data != null) {
+			int commentStartPos = -1;
+			Matcher matcher = mCommentStartPattern.matcher(data);
+			matcher = mCommentStartPattern.matcher(data);
+			if(matcher.find()){
+				commentStartPos = matcher.start();
+			}
+			int commentEndPos = -1;
+			matcher = mCommentEndPattern.matcher(data);
+			if(matcher.find()){
+				commentEndPos = matcher.start();
+			}
+			if (commentStartPos >= 0 && commentEndPos >= 0 && commentEndPos > commentStartPos) {
+				return commentEndPos - commentStartPos;
+			}
+		}
+		return 0;
+	}
+	
+	public boolean containsComment(String data) {
+		return getCommentNodeLength(data) > 0;
 	}
 	
 
@@ -297,11 +392,10 @@ public class DTDDocument {
 	private DTDNode getCommentNode(String content) {
 		DTDNode node = null;
 		if (content != null) {
-			Matcher matcher = DTDConstants.Patterns.getCommentNodePattern().matcher(content);
-			if(matcher.matches()){
-				printMatcher(matcher);
+			content = content.trim();
+			if(content.startsWith("<!--") && content.endsWith("-->")){
 				node = new DTDNode(DTDNode.NODE_TYPE_COMMENT, null, mFilePath);
-				node.setStringData(matcher.group(1));
+				node.setStringData(content.substring("<!--".length(), content.length() - "-->".length()));
 			}
 		}
 		return node;

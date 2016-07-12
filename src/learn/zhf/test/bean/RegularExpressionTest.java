@@ -62,21 +62,14 @@ public class RegularExpressionTest extends TestCase {
 	
 	
 	public void run(){
-		//String ps =  DTDConstants.Patterns.getElementContentPattern();
-		String cs = "<!ELEMENT scaling (millimeters, tenths)>";
-		Log.d(TAG, "res------>" +  DTDConstants.Patterns.getElementContentPattern().matcher(cs).matches());
-		//run6();
+		run6();
 	}
 	
 	
 	public void run6(){
-		Pattern pattern = DTDConstants.Patterns.getEntityDefValuesOnlyPattern();
-		Log.d(TAG, "result match regular-->" + DTDConstants.Patterns.REGULAR_ATTR_ENUM_VALUE);
 		String attrStr = "<!ATTLIST addbb >";
 		String elStr = "<!ELEMENT scaling (millimeters, tenths)>";
 		String enStr = "<!ENTITY % yyyy-mm-dd \"(#PCDATA)\">";
-		String cmStr = "<!-- addbb -->";
-		Log.d(TAG, "result match-->" + pattern.matcher(enStr).matches());
 	}
 	
 	

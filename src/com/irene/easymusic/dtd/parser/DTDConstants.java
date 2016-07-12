@@ -105,7 +105,7 @@ public class DTDConstants {
 				+ REGULAR_FILE_URI + ")\\s*\"\\s*>\\s*";
 
 		
-		public static final String REGULAR_DTD_COMMENT_NODE = "\\s*<!--\\s*(\\S+)\\s*-->\\s*";
+		//public static final String REGULAR_DTD_COMMENT_NODE = "\\s*<!--(\\s|.)*-->\\s*";
 		
 		public static final String REGULAR_DTD_DEF_NODE = "\\s*<!(ENTITY|ATTLIST|ELEMENT)[^<>]+>\\s*";
 		
@@ -185,13 +185,13 @@ public class DTDConstants {
 			return mDTDNodePattern;
 		}
 		
-		private static Pattern mDTDCommentNodePattern = null;
-		public static Pattern getCommentNodePattern(){
-			if(mDTDCommentNodePattern == null){
-				mDTDCommentNodePattern = Pattern.compile(REGULAR_DTD_COMMENT_NODE);
-			}
-			return mDTDCommentNodePattern;
-		}
+//		private static Pattern mDTDCommentNodePattern = null;
+//		public static Pattern getCommentNodePattern(){
+//			if(mDTDCommentNodePattern == null){
+//				mDTDCommentNodePattern = Pattern.compile(REGULAR_DTD_COMMENT_NODE);
+//			}
+//			return mDTDCommentNodePattern;
+//		}
 	
 	}
 }
