@@ -21,6 +21,7 @@ public class DTDNode {
 	private String mName;
 	private List<DTDNode> mChilds;
 	private String mStrData;
+	private String mComment;
 	
 	/**
 	 * restore data for different node
@@ -85,6 +86,14 @@ public class DTDNode {
 		return mName;
 	}
 
+	public String getComment(){
+		return mComment;
+	}
+	
+	public void setComment(String comment){
+		mComment = comment;
+	}
+	
 	public int getExistenceFlag() {
 		return mExistenceFlag;
 	}

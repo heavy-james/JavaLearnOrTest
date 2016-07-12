@@ -61,49 +61,53 @@ public class DTDConstants {
 		public static final String REGULAR_ENUM_NAMES = "\\(\\s*" + REGULAR_NAME + "(\\s*\\|\\s*" + REGULAR_NAME
 				+ "\\s*)*\\s*\\)";
 
-		private static final String REGULAR_ENTITY_REFERENCE = "%\\w+(-\\w+)*;*";
+		public static final String REGULAR_ENTITY_REFERENCE = "%\\w+(-\\w+)*;*";
 
 		public static final String REGULAR_ATTRI_NAME = "(" + REGULAR_NAME + "|" + REGULAR_XML_NAME + ")";
 
-		private static final String REGULAR_ATTR_ENUM_VALUE = "("
+		public static final String REGULAR_ATTR_ENUM_VALUE = "("
 				+ REGULAR_ENUM_NAMES
 				+ "|\\s*"
 				+ REGULAR_ENTITY_REFERENCE
-				+ "\\s*|\\s*CDATA\\s*|\\s*ID\\s*|\\s*IDREF\\s*|\\s*IDREFS\\s*|\\s*NMTOKEN\\s*|\\s*NMTOKENS\\s*|\\s*NOTATION\\s*)";
+				+ "\\s*|\\s*#CDATA\\s*|\\s*#PCDATA\\s*|\\s*ID\\s*|\\s*IDREF\\s*|\\s*IDREFS\\s*|\\s*NMTOKEN\\s*|\\s*NMTOKENS\\s*|\\s*NOTATION\\s*)";
 
-		private static final String REGULAR_ATTR_ENUM_EXISTENCE = "(\\s*#REQUIRED\\s*|\\s*#IMPLIED\\s*|\\s*#FIXED\\s*\\w*)";
+		public static final String REGULAR_ATTR_ENUM_EXISTENCE = "(\\s*#REQUIRED\\s*|\\s*#IMPLIED\\s*|\\s*#FIXED\\s*\\w*)";
 
-		private static final String REGULAR_ATTRI_NAME_VALUE_EXISTENCE = "\\s*" + REGULAR_ATTRI_NAME + "\\s+"
+		public static final String REGULAR_ATTRI_NAME_VALUE_EXISTENCE = "\\s*" + REGULAR_ATTRI_NAME + "\\s+"
 				+ REGULAR_ATTR_ENUM_VALUE + "\\s+" + REGULAR_ATTR_ENUM_EXISTENCE + "\\s*";
 
-		private static final String REGULAR_ATTR_CONTENT = "<!ATTLIST\\s*(" + REGULAR_NAME + ")\\s*((\\s*"
+		public static final String REGULAR_ATTR_CONTENT = "<!ATTLIST\\s*(" + REGULAR_NAME + ")\\s*((\\s*"
 				+ REGULAR_ATTRI_NAME_VALUE_EXISTENCE + "|" + REGULAR_ENTITY_REFERENCE + "\\s*)+)\\s*>";
 
-		private static final String REGULAR_ELEMENT_REFERENCE_NAME = "\\s*\\w+(-\\w+)*[\\?\\*\\+]\\s*";
+		public static final String REGULAR_ELEMENT_REFERENCE_NAME = "\\s*\\w+(-\\w+)*[\\?\\*\\+]?\\s*";
 
-		private static final String REGULAR_ELEMENT_SUB_ELEMENT_DEF = REGULAR_ELEMENT_REFERENCE_NAME + ",?\\s*|\\s*"
+		public static final String REGULAR_ELEMENT_SUB_ELEMENT_DEF = REGULAR_ELEMENT_REFERENCE_NAME + ",?\\s*|\\s*"
 				+ REGULAR_ENTITY_REFERENCE + "\\s*,?\\s*";
 
-		private static final String REGULAR_ELEMENT_CONTENT = "<!ELEMENT\\s*(" + REGULAR_NAME + ")\\s*\\((("
+		public static final String REGULAR_ELEMENT_CONTENT = "<!ELEMENT\\s*(" + REGULAR_NAME + ")\\s*\\((("
 				+ REGULAR_ELEMENT_SUB_ELEMENT_DEF + ")+)\\s*\\)\\s*>";
 
-		private static final String REGULAR_DOCTYPE_DECLARETION = "[^/]+(//[^/]+)+";
+		public static final String REGULAR_DOCTYPE_DECLARETION = "[^/]+(//[^/]+)+";
 
-		private static final String REGULAR_FILE_URI = "\\s*.*\\s*|\\s*http.*\\s*";
+		public static final String REGULAR_FILE_URI = "\\s*.*\\s*|\\s*http.*\\s*";
 
-		private static final String REGULAR_ENTITY_DEFINITION_VALUES_ONLY = "\\s*<!ENTITY\\s*%\\s*(" + REGULAR_NAME
-				+ ")\\s*\"\\s*(" + REGULAR_ENUM_NAMES + ")\\s*\"\\s*>\\s*";
+		public static final String REGULAR_ENTITY_DEFINITION_VALUES_ONLY = "\\s*<!ENTITY\\s*%\\s*(" + REGULAR_NAME
+				+ ")\\s*\"\\s*\\(?(" + REGULAR_ATTR_ENUM_VALUE + ")\\)?\\s*\"\\s*>\\s*";
 
-		private static final String REGULAR_ENTITY_DEFINITION_WITH_NAME = "\\s*<!ENTITY\\s*%\\s*(" + REGULAR_NAME
+		public static final String REGULAR_ENTITY_DEFINITION_WITH_NAME = "\\s*<!ENTITY\\s*%\\s*(" + REGULAR_NAME
 				+ ")\\s*\"\\s*((" + REGULAR_ATTRI_NAME_VALUE_EXISTENCE + ")+)\\s*\"\\s*>\\s*";
 
-		private static final String REGULAR_ENTITY_INSTRUMENT = "\\s*<!ENTITY\\s*%\\s*(" + REGULAR_NAME + ")\\s*\""
+		public static final String REGULAR_ENTITY_INSTRUMENT = "\\s*<!ENTITY\\s*%\\s*(" + REGULAR_NAME + ")\\s*\""
 				+ "(\\s*IGNORE|INCLUDE\\s*)" + "\\s*\"\\s*>\\s*";
 
-		private static final String REGULAR_ENTITY_DOCUMENT_DEF = "\\s*<!ENTITY\\s*%\\s*(" + REGULAR_NAME
+		public static final String REGULAR_ENTITY_DOCUMENT_DEF = "\\s*<!ENTITY\\s*%\\s*(" + REGULAR_NAME
 				+ ")\\s*(\\s*PUBLIC|SYSTEM\\s*)\\s*(\\s*\"\\s*" + REGULAR_DOCTYPE_DECLARETION + "\"\\s*)?\\s*\"\\s*("
 				+ REGULAR_FILE_URI + ")\\s*\"\\s*>\\s*";
 
+		
+		public static final String REGULAR_DTD_COMMENT_NODE = "\\s*<!--\\s*(\\S+)\\s*-->\\s*";
+		
+		public static final String REGULAR_DTD_DEF_NODE = "\\s*<!(ENTITY|ATTLIST|ELEMENT)[^<>]+>\\s*";
 		
 		public static Pattern mNameValueExistencePattern = null;
 		
@@ -172,5 +176,22 @@ public class DTDConstants {
 			}
 			return mAttriContentPattern;
 		}
+		
+		private static Pattern mDTDNodePattern = null;
+		public static Pattern getDTDNodePattern(){
+			if(mDTDNodePattern == null){
+				mDTDNodePattern = Pattern.compile(REGULAR_DTD_DEF_NODE);
+			}
+			return mDTDNodePattern;
+		}
+		
+		private static Pattern mDTDCommentNodePattern = null;
+		public static Pattern getCommentNodePattern(){
+			if(mDTDCommentNodePattern == null){
+				mDTDCommentNodePattern = Pattern.compile(REGULAR_DTD_COMMENT_NODE);
+			}
+			return mDTDCommentNodePattern;
+		}
+	
 	}
 }

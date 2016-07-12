@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.irene.easymusic.dtd.parser.DTDConstants;
+
 import learn.zhf.log.Log;
 
 public class RegularExpressionTest extends TestCase {
@@ -28,20 +30,20 @@ public class RegularExpressionTest extends TestCase {
 			+ REGULAR_ENTITY_REFERENCE
 			+ "\\s*|\\s*CDATA\\s*|\\s*ID\\s*|\\s*IDREF\\s*|\\s*IDREFS\\s*|\\s*NMTOKEN\\s*|\\s*NMTOKENS\\s*|\\s*NOTATION\\s*)";
 
-	private static final String REGULAR_ATTR_ENUM_EXISTENCE = "(\\s*#REQUIRED\\s*|\\s*#IMPLIED\\s*|\\s*#FIXED\\s*\\w*)";
+	private static final String REGULAR_ATTR_ENUM_EXISTENCE = "(\\s*#REQUIRED\\s*|\\s*#IMPLIED\\s*|\\s*#FIXED\\s*\\w*)?";
 
 	private static final String REGULAR_ATTRI_NAME_VALUE_EXISTENCE = "\\s*" + REGULAR_ATTRI_NAME + "\\s+"
 			+ REGULAR_ATTR_ENUM_VALUE + "\\s+" + REGULAR_ATTR_ENUM_EXISTENCE + "\\s*";
 
-	private static final String REGULAR_ATTR_CONTENT = "<!ATTLIST\\s*("+ REGULAR_NAME + ")\\s*((\\s*" + REGULAR_ATTRI_NAME_VALUE_EXISTENCE + "|"
-			+ REGULAR_ENTITY_REFERENCE + "\\s*)+)\\s*>";
+	private static final String REGULAR_ATTR_CONTENT = "\\s*<!ATTLIST\\s*("+ REGULAR_NAME + ")\\s*((\\s*" + REGULAR_ATTRI_NAME_VALUE_EXISTENCE + "|"
+			+ REGULAR_ENTITY_REFERENCE + "\\s*)+)\\s*>\\s*";
 
 	private static final String REGULAR_ELEMENT_REFERENCE_NAME = "\\s*\\w+(-\\w+)*[\\?\\*\\+]\\s*";
 	
 	private static final String REGULAR_ELEMENT_SUB_ELEMENT_DEF = REGULAR_ELEMENT_REFERENCE_NAME + ",?\\s*|\\s*"
 			+ REGULAR_ENTITY_REFERENCE + "\\s*,?\\s*";
 
-	private static final String REGULAR_ELEMENT_CONTENT = "<!ELEMENT\\s*(" + REGULAR_NAME + ")\\s*\\(((" + REGULAR_ELEMENT_SUB_ELEMENT_DEF + ")+)\\s*\\)\\s*>";
+	private static final String REGULAR_ELEMENT_CONTENT = "\\s*<!ELEMENT\\s*(" + REGULAR_NAME + ")\\s*\\(((" + REGULAR_ELEMENT_SUB_ELEMENT_DEF + ")+)\\s*\\)\\s*>\\s*";
 	
 	
 	private static final String REGULAR_DOCTYPE_DECLARETION = "[^/]+(//[^/]+)+";
@@ -56,12 +58,26 @@ public class RegularExpressionTest extends TestCase {
 	
 	private static final String REGULAR_ENTITY_DOCUMENT_DEF = "\\s*<!ENTITY\\s*%\\s*(" + REGULAR_NAME + ")\\s*(\\s*PUBLIC|SYSTEM\\s*)\\s*(\\s*\"\\s*" + REGULAR_DOCTYPE_DECLARETION + "\"\\s*)?\\s*\"\\s*(" + REGULAR_FILE_URI + ")\\s*\"\\s*>\\s*";
 
+	private static final String REGULAR_DTD_TAG = "\\s*(<!(ENTITY|ATTLIST|ELEMENT)[^<>]+>|<!--[^<>]+-->)";
 	
 	
 	public void run(){
-		run1();
+		//String ps =  DTDConstants.Patterns.getElementContentPattern();
+		String cs = "<!ELEMENT scaling (millimeters, tenths)>";
+		Log.d(TAG, "res------>" +  DTDConstants.Patterns.getElementContentPattern().matcher(cs).matches());
+		//run6();
 	}
 	
+	
+	public void run6(){
+		Pattern pattern = DTDConstants.Patterns.getEntityDefValuesOnlyPattern();
+		Log.d(TAG, "result match regular-->" + DTDConstants.Patterns.REGULAR_ATTR_ENUM_VALUE);
+		String attrStr = "<!ATTLIST addbb >";
+		String elStr = "<!ELEMENT scaling (millimeters, tenths)>";
+		String enStr = "<!ENTITY % yyyy-mm-dd \"(#PCDATA)\">";
+		String cmStr = "<!-- addbb -->";
+		Log.d(TAG, "result match-->" + pattern.matcher(enStr).matches());
+	}
 	
 	
 	public void run4(){

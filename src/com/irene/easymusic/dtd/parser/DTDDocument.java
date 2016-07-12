@@ -10,6 +10,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Matcher;
 
+import learn.zhf.log.Log;
+
 public class DTDDocument {
 
 	public static final String TAG = "DTDDocument";
@@ -20,6 +22,7 @@ public class DTDDocument {
 	private String mCurrentParseString = null;
 	private String mEncoding = null;
 	private File mFile;
+	private Matcher mCurrentMatcher;
 
 	private DTDDocument() {
 
@@ -37,62 +40,79 @@ public class DTDDocument {
 
 	public DTDNode getNextNode() throws DTDException {
 		DTDNode node = null;
+		Log.d(TAG, "=====DTDDocument getNextNode=====");
 		if (hasNextNode()) {
-			if (mCurrentParseString.startsWith("<!--") && mCurrentParseString.endsWith("-->")) {
-				node = getCommentNode(mCurrentParseString);
-			} else if (mCurrentParseString.startsWith("<!ATTLIST")) {
-				node = getAttriNode(mCurrentParseString);
+			String nextNodeContent = mCurrentMatcher.group(0);
+			mCurrentParseString = mCurrentParseString.substring(mCurrentMatcher.start() + nextNodeContent.length());
+			node = getCommentNode(nextNodeContent);
+			if (node == null) {
+				node = getAttriNode(nextNodeContent);
+			}
+			if (node == null) {
+				node = getEntityNode(nextNodeContent);
+			}
+			if (node == null) {
+				node = getElementNode(nextNodeContent);
+			}
+			if (node == null) {
+				Log.d(TAG, "get error node data-->" + nextNodeContent);
+				DTDException e = new DTDException(DTDException.ERROR_CODE_FORMAT, DTDException.ERROR_MSG_FORMAT
+						+ mCurrentParseString);
+				throw e;
+			}else{
 				
-			} else if (mCurrentParseString.startsWith("<!ENTITY")) {
-				node = getEntityNode(mCurrentParseString);
-			} else if (mCurrentParseString.startsWith("<!ELEMENT")) {
-				node = getElementNode(mCurrentParseString);
-			} else {
-				try {
-					throw new DTDException(DTDException.ERROR_CODE_FORMAT, DTDException.ERROR_MSG_FORMAT);
-				} catch (DTDException e) {
-					e.printStackTrace();
-				}
 			}
-			if (mCurrentParseString.length() > getFirstNodeLength(mCurrentParseString)) {
-				mCurrentParseString = mCurrentParseString.substring(getFirstNodeLength(mCurrentParseString) + 1);
-			} else {
-				mCurrentParseString = null;
-			}
+		}else{
+			//Log.d(TAG, "getNextNode hasNextNode false, str-->" + mCurrentParseString);
 		}
 		return node;
 	}
 
 	public boolean hasNextNode() {
-		if (mCurrentParseString == null || !contanisNode(mCurrentParseString)) {
+		boolean contains = contanisNode(mCurrentParseString);
+		if (mCurrentParseString == null || !contains) {
 			String temp = null;
+			mCurrentParseString = mCurrentParseString == null ? "" : mCurrentParseString;
 			StringBuffer sb = new StringBuffer(mCurrentParseString);
 			do {
+				Log.d(TAG, "DTDDocument hasNextNode readNextString");
 				temp = readNextString();
 				if(temp != null){
 					sb.append(temp);
 				}
-			} while (temp != null && !contanisNode(sb.toString()));
+				contains = contanisNode(sb.toString());
+				//Log.d(TAG, "hasNextNode contains-->" + contains + ";sb.toString-->" + sb.toString()) ;
+			} while (temp != null && !contains);
 			mCurrentParseString = sb.toString();
 		}
 		if (mCurrentParseString != null && contanisNode(mCurrentParseString)) {
+			Log.d(TAG, "DTDDocument hasNextNode res-->true");
 			return true;
+		}else{
+			Log.d(TAG, "DTDDocument hasNextNode res-->false");
 		}
 		return false;
 	}
 	
-	public int getFirstNodeLength(String data){
-		if (data != null) {
-			if (data.contains("<!") && data.contains(">")) {
-				return 	data.indexOf(">") - data.indexOf("<!") + 1;
-			}
-		}
-		return 0;
-	}
 
 	public boolean contanisNode(String data) {
-		return getFirstNodeLength(data) > 0;
+		if (data != null) {
+			data = data.trim();
+			if(data.startsWith("<!--")){
+				mCurrentMatcher = DTDConstants.Patterns.getCommentNodePattern().matcher(data);
+				if(mCurrentMatcher.find()){
+					return true;
+				}
+			}else{
+				mCurrentMatcher = DTDConstants.Patterns.getDTDNodePattern().matcher(data);
+				if (mCurrentMatcher.find()) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
+	
 
 	private String readNextString() {
 		if (mBufferedInputStream != null) {
@@ -122,8 +142,7 @@ public class DTDDocument {
 	private DTDNode getAttriNode(String content) throws DTDException {
 
 		DTDNode node = null;
-		if (content != null && content.startsWith("<!ATTLIST") && content.endsWith(">")) {
-			content = content.substring("<!ATTLIST".length(), content.length() - ">".length());
+		if (content != null) {
 			Matcher matcher = DTDConstants.Patterns.getAttriContentPattern().matcher(content);
 			String elementName = null;
 			if (matcher.matches()) {
@@ -131,9 +150,6 @@ public class DTDDocument {
 				String defStr = matcher.group(3);
 				node = new DTDNode(DTDNode.NODE_TYPE_ATTRIBUTE, elementName, mFilePath);
 				node.setStringData(defStr);
-			} else {
-				throw new DTDException(DTDException.ERROR_CODE_DEFINITION_NOT_FOUND,
-						DTDException.ERROR_MSG_DEFINITION_NOT_FOUND + ",element name not found in attri list");
 			}
 
 			/*
@@ -200,8 +216,7 @@ public class DTDDocument {
 
 	private DTDNode getElementNode(String content) throws DTDException {
 
-		if (content != null && content.startsWith("<!ELEMENT") && content.endsWith(">")) {
-
+		if (content != null) {
 			Matcher matcher = DTDConstants.Patterns.getElementContentPattern().matcher(content);
 			DTDNode node = null;
 			if (matcher.matches()) {
@@ -282,8 +297,12 @@ public class DTDDocument {
 	private DTDNode getCommentNode(String content) {
 		DTDNode node = null;
 		if (content != null) {
-			node = new DTDNode(DTDNode.NODE_TYPE_COMMENT, null, mFilePath);
-			node.setStringData(content.substring("<!--".length(), content.length() - "-->".length()));
+			Matcher matcher = DTDConstants.Patterns.getCommentNodePattern().matcher(content);
+			if(matcher.matches()){
+				printMatcher(matcher);
+				node = new DTDNode(DTDNode.NODE_TYPE_COMMENT, null, mFilePath);
+				node.setStringData(matcher.group(1));
+			}
 		}
 		return node;
 	}
@@ -291,10 +310,8 @@ public class DTDDocument {
 
 
 	private DTDNode getEntityNode(String content) throws DTDException {
-		if (content != null && content.startsWith("<!ENTITY") && content.endsWith(">")) {
-			content = content.substring("!ENTITY".length(), content.length() - ">".length());
+		if (content != null) {
 			DTDNode node = null;
-
 			Matcher matcher = DTDConstants.Patterns.getEntityDefValuesOnlyPattern().matcher(content);
 			if (matcher.matches()) {
 				// 绾�煎疄浣撳畾涔夌殑澶勭悊
@@ -363,6 +380,8 @@ public class DTDDocument {
 				 * "-//Recordare//ELEMENTS MusicXML 3.0 Layout//EN" matched
 				 * groups-->5;str-->//EN matched groups-->6;str-->"layout.mod"
 				 */
+				
+				printMatcher(matcher);
 				String refDocName = mFile.getParent() + File.separator + matcher.group(6);
 				node = new DTDNode(DTDNode.NODE_TYPE_ENTITY, matcher.group(1), refDocName);
 				EntityInfo info = new EntityInfo(EntityInfo.TYPE_COMPLEX_CONTENT, null, refDocName);
@@ -384,11 +403,18 @@ public class DTDDocument {
 				node.setObjData(info);
 				return node;
 			}
-
-			throw new DTDException(DTDException.ERROR_CODE_FORMAT, DTDException.ERROR_MSG_FORMAT
-					+ "; entity format error");
 		}
 		return null;
 	}
 
+	private void printMatcher(Matcher matcher){
+		if(matcher == null){
+			Log.d(TAG, "printMatcher matcher is null");
+			return;
+		}
+		for(int i = 0; i<= matcher.groupCount(); i++){
+			Log.d(TAG, "matcher group-->" + i + "; content-->" + matcher.group(i));
+		}
+	}
+	
 }

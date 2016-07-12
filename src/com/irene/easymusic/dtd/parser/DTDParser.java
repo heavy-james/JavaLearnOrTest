@@ -2,125 +2,102 @@ package com.irene.easymusic.dtd.parser;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Stack;
 
-import sun.misc.Queue;
+import com.irene.easymusic.dtd.parser.DTDHandler.OnHandleFinishedListener;
+import com.irene.easymusic.dtd.parser.DTDHandler.OnNewDocumentListener;
+
 import learn.zhf.log.Log;
+
 
 public class DTDParser {
 	
-	private  static final String TAG = "DTDParser";
-	private Stack<DTDNode> mNodes;
-	private List<DTDNode> mEntities;
-	private List<DTDNode> mAttributes;
-	private List<DTDNode> mELements;
+	private final String TAG ="DTDParser";
 	
-	private DTDParser(){
-		mNodes = new Stack<DTDNode>();
+	private String mEntranceFile;
+	
+	private String mEncoding;
+	
+	private String mTargetModel;
+	
+	private boolean mStopFlag = false;
+	
+	OnNewDocumentListener mOnNewDocumentListener;
+	
+	OnHandleFinishedListener mOnHandlerFinishedListener;
+	
+	public DTDParser(String sourceFile, String encoding,String targetModel){
+		mEntranceFile = sourceFile;
+		mEncoding = encoding;
+		mTargetModel = targetModel;
+		mOnHandlerFinishedListener = new MyHandlerFinishedListener();
+		mOnNewDocumentListener = new MyOnNewDocumentListener();
 	}
 	
-	private void addNode(DTDNode node){
-		if(null != node){
-			mNodes.push(node);
-		}
+	public void parse() throws FileNotFoundException, IOException{
+		Log.d(TAG, "DTDParser parse");
+		mOnNewDocumentListener.onNewDocument(mEntranceFile);
 	}
 	
-	private void addComment(DTDNode node){
-		if(node == null){
-			Log.d(TAG, "try to add comment node failed, node-->" + "null");
-			return;
-		}else if( node.getNodeType() != DTDNode.NODE_TYPE_COMMENT|| !node.isValid()){
-			Log.d(TAG, "try to add comment node failed, node-->" + node.getNodeType() + "; valid-->"+ node.isValid());
-			return;
-		}
-		addNode(node);
+	public void stop(){
+		mStopFlag = true;
 	}
 	
-	private void addEntity(DTDNode node){
-		if(node == null){
-			Log.d(TAG, "try to add entity node failed, node-->" + "null");
-			return;
-		}else if( node.getNodeType() != DTDNode.NODE_TYPE_ENTITY || !node.isValid()){
-			Log.d(TAG, "try to add entity node failed, node-->" + node.getNodeType() + "; valid-->"+ node.isValid());
-			return;
+	private class MyHandlerFinishedListener implements DTDHandler.OnHandleFinishedListener{
+
+		@Override
+		public void onHandleFinished(String dtdFileName) {
+			Log.d(TAG, "handler file-->" + dtdFileName + " is finished!");
 		}
-		if(mEntities == null){
-			mEntities = new LinkedList<DTDNode>();
-		}
-		if(mEntities.contains(node.getName())){
-			Log.d(TAG, "try to add entity node failed, node all ready existent-->" + node.getName());
-		}else{
-			mEntities.add(node);
-		}
-		addNode(node);
-	}
-	
-	private void addAttribute(DTDNode node){
-		if(node == null){
-			Log.d(TAG, "try to add attribute node failed, node-->" + "null");
-			return;
-		}else if( node.getNodeType() != DTDNode.NODE_TYPE_ATTRIBUTE || !node.isValid()){
-			Log.d(TAG, "try to add attribute node failed, node-->" + node.getNodeType() + "; valid-->"+ node.isValid());
-			return;
-		}
-		if(mAttributes == null){
-			mAttributes = new LinkedList<DTDNode>();
-		}
-		if(mAttributes.contains(node.getName())){
-			Log.d(TAG, "try to add attribute node failed, node all ready existent-->" + node.getName());
-		}else{
-			mAttributes.add(node);
-		}
-		addNode(node);
-	}
-	
-	private void addElement(DTDNode node){
-		if(node == null){
-			Log.d(TAG, "try to add element node failed, node-->" + "null");
-			return;
-		}else if( node.getNodeType() != DTDNode.NODE_TYPE_ELEMENT || !node.isValid()){
-			Log.d(TAG, "try to add element node failed, node-->" + node.getNodeType() + "; valid-->"+ node.isValid());
-			return;
-		}
-		if(mEntities == null){
-			mEntities = new LinkedList<DTDNode>();
-		}
-		if(mEntities.contains(node.getName())){
-			Log.d(TAG, "try to add element node failed, node all ready existent-->" + node.getName());
-		}else{
-			mEntities.add(node);
-		}
-		addNode(node);
-	}
-	
-	private List<DTDNode> getEntities(){
-		return mEntities;
-	}
-	
-	private List<DTDNode> getAttributes(){
-		return mAttributes;
-	}
-	
-	private List<DTDNode> getElements(){
-		return mELements;
-	}
-	
-	public static DTDParser parse(String sourceFile, String encoding) throws FileNotFoundException, IOException{
-		DTDDocument document = DTDDocument.loadFile(sourceFile, encoding);
-		return null;
-	}
-	
-	public void toJavaClasses(String targetPath, String packageName){
 		
 	}
 	
-	public void toDataBaseCreatFile(String dataBaseName){
+	private class StreamThread extends Thread{
+		
+		private DTDDocument mSourceDocument;
+		private DTDHandler mSourceHandler;
+		
+		public StreamThread(DTDDocument document,DTDHandler handler){
+			mSourceDocument = document;
+			mSourceHandler = handler;
+		}
+		@Override
+		public void run() {
+			Log.d(TAG, "=====StreamThread run=====");
+			if(mSourceDocument == null || mSourceHandler == null) {
+				Log.d(TAG, "startStream initial condition error, return");
+				return ;
+			}
+			while(!mStopFlag && mSourceDocument.hasNextNode()){
+				try {
+					mSourceHandler.handle(mSourceDocument.getNextNode());
+				} catch (DTDException e) {
+					//mStopFlag = true;
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	private class MyOnNewDocumentListener implements DTDHandler.OnNewDocumentListener{
+
+		@Override
+		public void onNewDocument(String fileName) {
+			try {
+				if(fileName == null || fileName.equals("")){
+					Log.d(TAG, "MyOnNewDocumentListener onNewDocument fileName is empty");
+					return;
+				}
+				DTDDocument document = DTDDocument.loadFile(fileName, mEncoding);
+				DTDHandler handler = new DTDHandler(mTargetModel, fileName);
+				handler.setOnHandleFinishedListener(mOnHandlerFinishedListener);
+				handler.setOnNewDocumentListener(mOnNewDocumentListener);
+				new StreamThread(document, handler).start();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 		
 	}
 	
-	public void toSchema(){
-		
-	}
 }
