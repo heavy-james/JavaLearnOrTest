@@ -11,9 +11,13 @@ public class DTDException extends Throwable{
 	
 	public static final int ERROR_CODE_DEFINITION_NOT_FOUND = 2;
 	
+	public static final int ERROR_CODE_OPERATION_ERROR = 3;
+	
 	public static final String ERROR_MSG_FORMAT = "DTD file format error";
 	
 	public static final String ERROR_MSG_DEFINITION_NOT_FOUND = "definition not found";
+	
+	public static final String ERROR_MSG_OPERATION_ERROR = "DTD file operation error";
 	
 	public DTDException(int errorCode,String errorMsg){
 		this.errorCode = errorCode;

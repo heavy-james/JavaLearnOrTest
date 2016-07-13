@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -20,16 +21,19 @@ public class DTDDocument {
 	private InputStream mInputStream;
 	private BufferedInputStream mBufferedInputStream;
 	private byte[] mBuffer = new byte[1024];
-	private String mCurrentParseString = null;
+	private String mCurrentParseString = "";
+	private String mNodeContentString = null;
 	private String mEncoding = null;
 	private File mFile;
-
+	private Stack<String> mTagStack  = null;
+	
 	private DTDDocument() {
 
 	}
 
 	public static DTDDocument loadFile(String filePath, String encoding) throws FileNotFoundException, IOException {
 		DTDDocument instance = new DTDDocument();
+		instance.mTagStack = new Stack<String>();
 		instance.mFilePath = filePath;
 		instance.mFile = new File(filePath);
 		instance.mInputStream = new FileInputStream(instance.mFile);
@@ -38,174 +42,131 @@ public class DTDDocument {
 		return instance;
 	}
 
+	
+	private String mLastParseString = null;
+
 	public DTDNode getNextNode() throws DTDException {
 		DTDNode node = null;
 		Log.d(TAG, "=====DTDDocument getNextNode=====");
-		if (hasNextNode()) {
+		if (mNodeContentString != null) {
 			try {
-				Thread.sleep(10);
+				Thread.sleep(1000);
 			} catch (InterruptedException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
-			int nodeStartPos = -1;
-			int nodeEndPos = -1;
-			int commentStartPos = -1;
-			int commentEndPos = -1;
-			Matcher matcher = mNodeStartPattern.matcher(mCurrentParseString);
-			if(matcher.find()){
-				nodeStartPos = matcher.start();
-			}
-			matcher = mNodeEndPattern.matcher(mCurrentParseString);
-			if(matcher.find()){
-				nodeEndPos = matcher.start();
-			}
-			matcher = mCommentStartPattern.matcher(mCurrentParseString);
-			if(matcher.find()){
-				commentStartPos = matcher.start();
-			}
-			matcher = mCommentEndPattern.matcher(mCurrentParseString);
-			if(matcher.find()){
-				commentEndPos = matcher.start();
-			}
-			
-			int length = commentEndPos - commentStartPos;
-			String nextNodeContent = null;
-			if(commentStartPos >= 0 &&length >= 0){
-				nextNodeContent = mCurrentParseString.substring(commentStartPos, commentEndPos + "-->".length());
-				mCurrentParseString = mCurrentParseString.substring(commentStartPos + nextNodeContent.length());
-			}
-			length = nodeEndPos - nodeStartPos;
-			if(nodeStartPos >= 0 && length >= 0){
-				if(commentStartPos < 0 || (commentStartPos >= 0 && commentStartPos > nodeEndPos)){
-					nextNodeContent = mCurrentParseString.substring(nodeStartPos, nodeEndPos + "**>".length());
-					mCurrentParseString = mCurrentParseString.substring(nodeStartPos + nextNodeContent.length());
-				}
-			}
-			//Log.d(TAG, "nodeStartPos-->" + nodeStartPos);
-			//Log.d(TAG, "nodeEndPos-->" + nodeEndPos);
-			//Log.d(TAG, "commentStartPos-->" + commentStartPos);
-			//Log.d(TAG, "commentEndPos-->" + commentEndPos);
-			//Log.d(TAG, "nextNodeContent-->" + nextNodeContent);
-			//Log.d(TAG, "mCurrentParseString-->" + mCurrentParseString);
-			if(nextNodeContent == null){
+
+			if (mNodeContentString == null) {
 				return null;
 			}
-			node = getCommentNode(nextNodeContent);
+			node = getCommentNode(mNodeContentString);
 			if (node == null) {
-				node = getAttriNode(nextNodeContent);
+				node = getAttriNode(mNodeContentString);
 			}
 			if (node == null) {
-				node = getEntityNode(nextNodeContent);
+				node = getEntityNode(mNodeContentString);
 			}
 			if (node == null) {
-				node = getElementNode(nextNodeContent);
+				node = getElementNode(mNodeContentString);
 			}
 			if (node == null) {
-				Log.d(TAG, "get error node data-->" + nextNodeContent);
-				DTDException e = new DTDException(DTDException.ERROR_CODE_FORMAT, DTDException.ERROR_MSG_FORMAT
-						+ mCurrentParseString);
+				Log.d(TAG, "get error node data-->" + mNodeContentString);
+				Log.d(TAG, "mLastParseString-->" + mLastParseString);
+				DTDException e = new DTDException(DTDException.ERROR_CODE_FORMAT,
+						DTDException.ERROR_MSG_FORMAT + mCurrentParseString);
 				throw e;
-			}else{
-				
+			} else {
+
 			}
-		}else{
-			//Log.d(TAG, "getNextNode hasNextNode false, str-->" + mCurrentParseString);
+		} else {
+			Log.d(TAG, "getNextNode hasNextNode error, need call hasNextNode() before call getNextNode()");
+			throw new DTDException(DTDException.ERROR_CODE_OPERATION_ERROR,
+					DTDException.ERROR_MSG_OPERATION_ERROR + ", need call hasNextNode() before call getNextNode()");
 		}
 		return node;
 	}
 
 	public boolean hasNextNode() {
-		boolean contains = contanisNode(mCurrentParseString);
-		if (mCurrentParseString == null || !contains) {
-			String temp = null;
-			mCurrentParseString = mCurrentParseString == null ? "" : mCurrentParseString;
-			StringBuffer sb = new StringBuffer(mCurrentParseString);
-			do {
-				Log.d(TAG, "DTDDocument hasNextNode readNextString");
-				temp = readNextString();
-				if(temp != null){
-					sb.append(temp);
+		String nodeContent = null;
+		while (nodeContent == null) {
+			nodeContent = getNodeContent();
+			Log.d(TAG, "get node content-->" + nodeContent);
+			if (nodeContent == null) {
+				String nextString = readNextString();
+				if (nextString != null) {
+					mCurrentParseString += nextString;
+					mTagStack.clear();
+					nodeContent = getNodeContent();
+				} else {
+					return false;
 				}
-				contains = contanisNode(sb.toString());
-				//Log.d(TAG, "hasNextNode contains-->" + contains + ";sb.toString-->" + sb.toString()) ;
-			} while (temp != null && !contains);
-			mCurrentParseString = sb.toString();
+			}
 		}
-		if (mCurrentParseString != null && contanisNode(mCurrentParseString)) {
-			Log.d(TAG, "DTDDocument hasNextNode res-->true");
-			return true;
-		}else{
-			Log.d(TAG, "DTDDocument hasNextNode res-->false");
-		}
-		return false;
+		mNodeContentString = nodeContent;
+		return true;
 	}
 	
-	Pattern mNodeStartPattern = Pattern.compile("\\s*<![^-][^-]");
-	Pattern mNodeEndPattern = Pattern.compile("[^-][^-]>\\s*");
-	Pattern mCommentStartPattern = Pattern.compile("\\s*<!--");
-	Pattern mCommentEndPattern = Pattern.compile("-->\\s*");
 	
+	Pattern mNodeStartPattern = Pattern.compile("\\s*<![^-]\\s*");
+	Pattern mNodeEndPattern = Pattern.compile("\\s*[^-]>\\s*");
+	Pattern mCommentStartPattern = Pattern.compile("\\s*<!--\\s*");
+	Pattern mCommentEndPattern = Pattern.compile("\\s*-->\\s*");
 	
-	public boolean contanisNode(String data) {
-		if (data != null) {
-			return containsComment(data) || containsNormalNode(data);
+	Pattern mTagPattern = Pattern.compile("\\s*(<!--|<![^-]|[^-]>|-->)\\s*");
+	
+	private String getNodeContent(){
+		if(mCurrentParseString == null || "".equals(mCurrentParseString)){
+			return null;
 		}
-		return false;
+		Log.d(TAG, "getNodeContent mCurrentParseString-->" + mCurrentParseString);
+		Matcher matcher = mTagPattern.matcher(mCurrentParseString);
+		int startPos = 0;
+		int length = 0;
+		while(matcher.find()){
+			startPos = matcher.start();
+			//Log.d(TAG, "find pos-->" + startPos);
+			length = matcher.group(0).length();
+			mTagStack.push(matcher.group(0));
+			Log.d(TAG, "matched tag, stack push-->" + matcher.group(0));
+			if(hasPairTag()){
+				mTagStack.clear();
+				String content =  mCurrentParseString.substring(0,  startPos + length);
+				mCurrentParseString = mCurrentParseString.substring(content.length());
+				return content;
+			}
+		}
+		return null;
 	}
 	
-	public boolean containsNormalNode(String data){
-		return getNormalNodeLength(data) > 0;
-	}
 	
-	public int getNormalNodeLength(String data){
-		Matcher matcher = mNodeStartPattern.matcher(data);
-		int nodeStartPos = -1;
-		if(matcher.find()){
-			nodeStartPos = matcher.start();
-		}
-		int nodeEndPos = -1;
-		matcher = mNodeEndPattern.matcher(data);
-		if(matcher.find()){
-			nodeEndPos = matcher.start();
-		}
-		int commentStartPos = -1;
-		matcher = mCommentStartPattern.matcher(data);
-		if(matcher.find()){
-			commentStartPos = matcher.start();
-		}
-		if(nodeStartPos >= 0 && nodeEndPos >= 0 && nodeEndPos > nodeStartPos){
-			if(commentStartPos >= 0 && nodeStartPos > commentStartPos){
-				return 0;
+	private boolean hasPairTag(){
+		boolean needMatch = true;
+		while(mTagStack.size() > 1 && needMatch){
+			String lastTag = mTagStack.pop();
+			//Log.d(TAG, "hasPairTag lastTag-->" + lastTag);
+			String preTag = mTagStack.peek();
+			//Log.d(TAG, "hasPairTag preTag-->" + preTag);
+			boolean matched = false;
+			if(mNodeStartPattern.matcher(preTag).matches() && mNodeEndPattern.matcher(lastTag).matches()){
+				matched = true;
+			}
+			if(mCommentStartPattern.matcher(preTag).matches() && mCommentEndPattern.matcher(lastTag).matches()){
+				matched = true;
+			}
+			if(matched){
+				mTagStack.pop();
+				Log.d(TAG, "matched tag, stack size-->" + mTagStack.size());
 			}else{
-				return nodeEndPos - nodeStartPos;
+				mTagStack.push(lastTag);
+				needMatch = false;
 			}
 		}
-		return 0;
-	}
-	
-	public int getCommentNodeLength(String data){
-		if (data != null) {
-			int commentStartPos = -1;
-			Matcher matcher = mCommentStartPattern.matcher(data);
-			matcher = mCommentStartPattern.matcher(data);
-			if(matcher.find()){
-				commentStartPos = matcher.start();
-			}
-			int commentEndPos = -1;
-			matcher = mCommentEndPattern.matcher(data);
-			if(matcher.find()){
-				commentEndPos = matcher.start();
-			}
-			if (commentStartPos >= 0 && commentEndPos >= 0 && commentEndPos > commentStartPos) {
-				return commentEndPos - commentStartPos;
-			}
+		if(mTagStack.size() == 0){
+			Log.d(TAG, "hasPairTag res-->" + true);
+			return true;
 		}
-		return 0;
-	}
-	
-	public boolean containsComment(String data) {
-		return getCommentNodeLength(data) > 0;
+		Log.d(TAG, "hasPairTag res-->" + false);
+		return false;
 	}
 	
 

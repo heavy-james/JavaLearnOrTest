@@ -147,8 +147,8 @@ public class DTDHandler {
 		if(node == null){
 			return false;
 		}
-		Log.d(TAG, "node type-->" + node.getNodeType() + "; node name-->" + node.getName());
-		Log.d(TAG, "node strData-->" + node.getStringData() + "; node objData-->" + node.getObjData());
+		//Log.d(TAG, "node type-->" + node.getNodeType() + "; node name-->" + node.getName());
+		//Log.d(TAG, "node strData-->" + node.getStringData() + "; node objData-->" + node.getObjData());
 		switch(node.getNodeType()){
 		case DTDNode.NODE_TYPE_ATTRIBUTE:
 			break;

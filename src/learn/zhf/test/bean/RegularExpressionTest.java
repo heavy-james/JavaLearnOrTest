@@ -67,9 +67,14 @@ public class RegularExpressionTest extends TestCase {
 	
 	
 	public void run6(){
-		String attrStr = "<!ATTLIST addbb >";
-		String elStr = "<!ELEMENT scaling (millimeters, tenths)>";
-		String enStr = "<!ENTITY % yyyy-mm-dd \"(#PCDATA)\">";
+		Pattern mTagPattern = Pattern.compile("\\s*<!--|(<![^-]|[^-]>|-->\\s*");
+		Matcher matcher = mTagPattern.matcher("<!dddddd");
+		if( matcher.find()){
+			 Log.d(TAG, "match res---->" + matcher.group(0));
+			 Log.d(TAG, "match res---->" + matcher.group(1));
+		}else{
+			 Log.d(TAG, "match res----> null");
+		}
 	}
 	
 	
