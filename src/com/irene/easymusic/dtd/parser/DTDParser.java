@@ -2,6 +2,8 @@ package com.irene.easymusic.dtd.parser;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.irene.easymusic.dtd.parser.DTDHandler.OnHandleFinishedListener;
 import com.irene.easymusic.dtd.parser.DTDHandler.OnNewDocumentListener;
@@ -24,11 +26,14 @@ public class DTDParser {
 	OnNewDocumentListener mOnNewDocumentListener;
 	
 	OnHandleFinishedListener mOnHandlerFinishedListener;
+
+	private Map<String, DTDDocument> mDocuments;
 	
 	public DTDParser(String sourceFile, String encoding,String targetModel){
 		mEntranceFile = sourceFile;
 		mEncoding = encoding;
 		mTargetModel = targetModel;
+		mDocuments = new HashMap<String, DTDDocument>();
 		mOnHandlerFinishedListener = new MyHandlerFinishedListener();
 		mOnNewDocumentListener = new MyOnNewDocumentListener();
 	}
@@ -47,6 +52,17 @@ public class DTDParser {
 		@Override
 		public void onHandleFinished(String dtdFileName) {
 			Log.d(TAG, "handler file-->" + dtdFileName + " is finished!");
+			if(mDocuments.containsKey(dtdFileName)){
+				DTDDocument doc = mDocuments.get(dtdFileName);
+				try {
+					Log.d(TAG, "release dtd document-->" + dtdFileName);
+					doc.release();
+					mDocuments.remove(dtdFileName);
+				} catch (IOException e) {
+					Log.d(TAG, "release dtd document-->" + dtdFileName + "io exception!");
+					e.printStackTrace();
+				}
+			}
 		}
 		
 	}
@@ -88,6 +104,7 @@ public class DTDParser {
 					return;
 				}
 				DTDDocument document = DTDDocument.loadFile(fileName, mEncoding);
+				mDocuments.put(fileName, document);
 				DTDHandler handler = new DTDHandler(mTargetModel, fileName);
 				handler.setOnHandleFinishedListener(mOnHandlerFinishedListener);
 				handler.setOnNewDocumentListener(mOnNewDocumentListener);

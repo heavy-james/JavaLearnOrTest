@@ -59,6 +59,7 @@ public class DTDDocument {
 			if (mNodeContentString == null) {
 				return null;
 			}
+			Log.d(TAG, "getNextNode mNodeContentString-->" + mNodeContentString);
 			node = getCommentNode(mNodeContentString);
 			if (node == null) {
 				node = getAttriNode(mNodeContentString);
@@ -118,19 +119,26 @@ public class DTDDocument {
 		if(mCurrentParseString == null || "".equals(mCurrentParseString)){
 			return null;
 		}
-		Log.d(TAG, "getNodeContent mCurrentParseString-->" + mCurrentParseString);
+		//Log.d(TAG, "getNodeContent mCurrentParseString-->" + mCurrentParseString);
 		Matcher matcher = mTagPattern.matcher(mCurrentParseString);
-		int startPos = 0;
+		int pairedTagPos = 0;
 		int length = 0;
+		boolean firstFind = true;
+		int firstTagPos = 0;
 		while(matcher.find()){
-			startPos = matcher.start();
+			pairedTagPos = matcher.start();
+			if(firstFind){
+				firstTagPos = pairedTagPos;
+				Log.d(TAG, "getNodeContent firstTagPos-->" +firstTagPos);
+				firstFind = false;
+			}
 			//Log.d(TAG, "find pos-->" + startPos);
 			length = matcher.group(0).length();
 			mTagStack.push(matcher.group(0));
 			Log.d(TAG, "matched tag, stack push-->" + matcher.group(0));
 			if(hasPairTag()){
 				mTagStack.clear();
-				String content =  mCurrentParseString.substring(0,  startPos + length);
+				String content =  mCurrentParseString.substring(firstTagPos,  firstTagPos + pairedTagPos + length);
 				mCurrentParseString = mCurrentParseString.substring(content.length());
 				return content;
 			}
